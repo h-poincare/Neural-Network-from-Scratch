@@ -41,9 +41,10 @@ def sigmoidGradient(z):
 #       num_hidden_layers = number of hidden layers
 #       n_outputs = number of units in the output layer
 # this function will return a list which contains each layer of the network as a vector of zeros
-def initializeNet(n_inputs, num_hidden_units, num_hidden_layers, n_outputs):
+def initializeNet(n_inputs, num_hidden_units, n_outputs):
     first_layer = np.zeros((n_inputs, 1))
     output_layer = np.zeros((n_outputs, 1))
+    num_hidden_layers = len(num_hidden_units)
     lis_hidden_layers = []
     lis_hidden_layers.append(first_layer)
     for i in range(num_hidden_layers):
@@ -99,7 +100,7 @@ def gradientDescent(theta, thetGrad, alpha):
 # thetas- list, contains randomly initialized weights
 # the output of the function:
 # thetas = list, contains updated matrices of weights after 1 epoch
-def propagation(Xdata, ydata, thetas, alpha, lamb):
+def propagation(Xdata, ydata, thetas, alpha, lamb, network_arch):
     # number of examples
     M = Xdata.shape[0]
     # bias term
@@ -110,7 +111,7 @@ def propagation(Xdata, ydata, thetas, alpha, lamb):
     # loop over each example one at a time, perform feedforward, back propagation, and return matrices of partial derivatives
     for j in range(Xdata.shape[0]):
         # initialize network archictecutre
-        network = initializeNet(64, [25, 25], 2, 10)
+        network = initializeNet(network_arch[0], network_arch[1], network_arch[2])
         # index of the output layer in the network
         output_layer = len(network) - 1
         # list that will hold all the deltas from backprop. for each training example
@@ -180,7 +181,7 @@ def propagation(Xdata, ydata, thetas, alpha, lamb):
 # thetas- list, contains randomly initialized weights
 # the output of the function:
 # thetas = list, contains updated matrices of weights after 1 epoch
-def stochastic_propagation(Xdata, ydata, thetas, alpha, lamb):
+def stochastic_propagation(Xdata, ydata, thetas, alpha, lamb, network_arch):
     # number of examples
     M = Xdata.shape[0]
     # bias term
@@ -191,7 +192,7 @@ def stochastic_propagation(Xdata, ydata, thetas, alpha, lamb):
 
     while j < M:
         # initialize network archictecutre
-        network = initializeNet(64, [25, 25], 2, 10)
+        network = initializeNet(network_arch[0], network_arch[1], network_arch[2])
         # index of the output layer in the network
         output_layer = len(network) - 1
         # list that will hold all the deltas from backprop. for each training example
@@ -327,17 +328,17 @@ def prediction(Xdata, ydata, network, weights):
 # the function will return:
 # weights: the optimal weights found after the given number of epochs
 # weight_history: a list with the updated weights after each epoch
-def trainModel(X, y, weights, epochs, alpha, lamb, solver):
+def trainModel(X, y, weights, epochs, alpha, lamb, solver, network_arch):
     weight_history = []
     if solver == 'stochastic':
         for i in range(epochs):
-            new_weights = stochastic_propagation(X, y, weights, alpha, lamb)
+            new_weights = stochastic_propagation(X, y, weights, alpha, lamb, network_arch)
             weight_history.append(new_weights)
             weights = new_weights
 
     elif solver == 'full_batch':
         for j in range(epochs):
-            new_weights = propagation(X, y, weights, alpha, lamb)
+            new_weights = propagation(X, y, weights, alpha, lamb, network_arch)
             weight_history.append(new_weights)
             weights = new_weights
 
@@ -356,7 +357,7 @@ def trainModel(X, y, weights, epochs, alpha, lamb, solver):
 # epochs - int, number of epochs each model will be trained for
 # k - int, number of folds
 # this function will print out the accuracy for each of the k-models that are trained and return the average of those k-accuracies
-def kfoldCV(X, y, alpha, lamb, solver, epochs, k):
+def kfoldCV(X, y, alpha, lamb, solver, epochs, k, network_arch):
     X, y = utils.shuffle(X, y)
     # convert X-data and labels from tuples to arrays
     X = np.asarray(X)
@@ -394,10 +395,10 @@ def kfoldCV(X, y, alpha, lamb, solver, epochs, k):
         ytemp = np.concatenate((ytemp), axis=0)
 
         # initialize network and weights for the neural nets.
-        network = initializeNet(64, [25, 25], 2, 10)
+        network = initializeNet(network_arch[0], network_arch[1], network_arch[2])
         weights = initializeWeights(network)
         # learn the optimal weights for each of the k models
-        learned_weights = trainModel(Xtemp, ytemp, weights, epochs, alpha, lamb, solver)[0]
+        learned_weights = trainModel(Xtemp, ytemp, weights, epochs, alpha, lamb, solver, network_arch)[0]
         # find the accuracy for each of the k-models and save in list named accuracies
         accuracies.append(prediction(Xtest_set, ytest_set, network, learned_weights) * 100)
         # print the accuracy found for each model
@@ -433,7 +434,7 @@ ylabels = yLabels(ydata, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 y = ylabels.T
 
 # initialize network architecture, 64 features, 1 hidden layer with 25 hidden units, output layer with 10 classes
-network = initializeNet(64, [25, 25], 2, 10)
+network = initializeNet(64, [25, 25], 10)
 # randomly initialize network weights according to the network architecutre
 thetas = initializeWeights(network)
 
@@ -443,14 +444,14 @@ Xtrain, Xtest, ytrain, ytest = train_test_split(Xdata, y, test_size=0.33, random
 # train neural network for 50 epochs using stochastic gradient descent, regularization parameter lambda=0.0001. Print
 # training accuracy for each epoch.
 for i in range(50):
-    new = stochastic_propagation(Xtrain, ytrain, thetas, 0.010, 0.0001)
+    new = stochastic_propagation(Xtrain, ytrain, thetas, 0.010, 0.001, [64, [25, 25], 10])
     print("Train Accuracy: {:.2f}%".format(prediction(Xtrain, ytrain, network, new) * 100))
     thetas = new
 
-# print test accuracy from optimal weights found above
+# # print test accuracy from optimal weights found above
 print("Test Accuracy: {:.2f}%".format(prediction(Xtest, ytest, network, new) * 100))
 
 # use 5-fold cross validation and take average of the 5 accurcies
-kfoldCV(Xdata, ydata, 0.01, 0.00001, 'stochastic', 50, 5)
+kfoldCV(Xdata, ydata, 0.01, 0.00001, 'stochastic', 50, 5, [64, [25, 25], 10])
 
 
